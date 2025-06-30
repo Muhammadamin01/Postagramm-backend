@@ -21,7 +21,7 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: 'https://postagramm-front.vercel.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   },
@@ -39,7 +39,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://postagramm-front.vercel.app',
   credentials: true,
 }));
 
