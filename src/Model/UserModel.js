@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
     databirth: { type: Date, default: null },
-    role: { type: Number, enum: [100, 99], default: 100 },
+    role: { type: Number, enum: [100, 101], default: 100 },
     job: { type: String, default: '' },
     hobby: { type: String, default: '' }
   },
