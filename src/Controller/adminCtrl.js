@@ -82,58 +82,64 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-exports.updateUser = async (req, res) => {
+exports.updatePost = async (req, res) => {
   try {
-    const userId = req.params.id;
-    // Admin yoki o‘zi update qila oladi
-    if (req.user.role !== 101 && req.user._id.toString() !== userId) {
-      return res.status(403).json({ message: "Sizda bu foydalanuvchini yangilash huquqi yo‘q" });
+    const postId = req.params.id;
+    const { content, deleteCurrentPostImage } = req.body; // Destructure deleteCurrentPostImage
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post topilmadi' });
     }
-    const user = await User.findById(userId).select('+password');
-    if (!user) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
 
-    const [emailExists, usernameExists] = await Promise.all([
-      req.body.email && req.body.email !== user.email
-        ? User.findOne({ email: req.body.email })
-        : null,
-      req.body.username && req.body.username !== user.username
-        ? User.findOne({ username: req.body.username })
-        : null
-    ]);
-    if (emailExists) return res.status(400).json({ message: 'Bu email allaqachon band' });
-    if (usernameExists) return res.status(400).json({ message: 'Bu username allaqachon band' });
+    // Ensure only the post owner or an admin can update
+    // Assuming req.user contains the authenticated user's info
+    if (req.user.role !== 101 && req.user._id.toString() !== post.userId.toString()) {
+      return res.status(403).json({ message: "Sizda bu postni yangilash huquqi yo‘q" });
+    }
 
-    if (req.body.email) user.email = req.body.email;
-    if (req.body.username) user.username = req.body.username;
-    if (req.body.surname) user.surname = req.body.surname;
-    if (req.body.job !== undefined) user.job = req.body.job;
-    if (req.body.hobby !== undefined) user.hobby = req.body.hobby;
+    // Update content if provided
+    if (content !== undefined) {
+      post.content = content;
+    }
 
-    if (req.files && req.files.profileImage) {
-      if (user.profileImage && user.profileImage.public_id) {
-        await cloudinary.uploader.destroy(user.profileImage.public_id).catch(() => {});
+    // Handle image deletion
+    if (deleteCurrentPostImage === 'true' || deleteCurrentPostImage === true) {
+      if (post.postImage && post.postImage.public_id) {
+        await cloudinary.uploader.destroy(post.postImage.public_id).catch(err => {
+          console.error("Cloudinary image deletion failed:", err);
+          // Log the error but don't prevent the update if deletion fails
+        });
+        post.postImage = undefined; // Remove image reference from the post
       }
-      const file = req.files.profileImage;
+    }
+
+    // Handle new image upload
+    if (req.files && req.files.postImage) {
+      const file = req.files.postImage;
+
+      // If a new image is being uploaded, delete the old one first (if any)
+      // This is crucial to avoid orphaned images on Cloudinary
+      if (post.postImage && post.postImage.public_id) {
+        await cloudinary.uploader.destroy(post.postImage.public_id).catch(err => {
+          console.error("Cloudinary old image replacement deletion failed:", err);
+        });
+      }
+
       const result = await cloudinary.uploader.upload(file.tempFilePath, {
-        folder: 'profiles',
+        folder: 'posts', // Or your desired folder
         resource_type: 'auto',
       });
-      await fs.promises.unlink(file.tempFilePath);
-      user.profileImage = { url: result.secure_url, public_id: result.public_id };
+      await fs.promises.unlink(file.tempFilePath); // Delete temp file
+
+      post.postImage = { url: result.secure_url, public_id: result.public_id };
     }
 
-    if (req.body.password && req.body.password.length > 0) {
-      user.password = req.body.password; 
-    }
+    await post.save();
 
-    await user.save();
-    const userToReturn = user.toObject();
-    delete userToReturn.password;
-    res.status(200).json({ message: 'Foydalanuvchi muvaffaqiyatli yangilandi', user: userToReturn });
+    res.status(200).json({ message: 'Post muvaffaqiyatli yangilandi', post });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Username yoki email band" });
-    }
+    console.error('Post yangilashda xatolik:', error);
     res.status(500).json({ message: 'Serverda xatolik: ' + error.message });
   }
 };
