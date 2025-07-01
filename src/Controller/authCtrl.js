@@ -36,52 +36,97 @@ const authCtrl = {
     }
   },
 
+  // signup: async (req, res) => {
+  //   try {
+  //     const { username, email, password, surname, job, hobby } = req.body;
+  //     if (!username || !email || !password) {
+  //       return res.status(400).json({ message: "Barcha qatorlarni to‘ldiring" });
+  //     }
+
+  //     const [userExists, usernameExists] = await Promise.all([
+  //       User.findOne({ email }),
+  //       User.findOne({ username }),
+  //     ]);
+  //     if (userExists) return res.status(403).json({ message: "Bu email allaqachon mavjud" });
+  //     if (usernameExists) return res.status(403).json({ message: "Bu username allaqachon mavjud" });
+
+  //     const hashedPassword = await bcrypt.hash(password, 10);
+  //     const newUser = new User({
+  //       username,
+  //       email,
+  //       password: hashedPassword,
+  //       surname,
+  //       job,
+  //       hobby
+  //     });
+  //     await newUser.save();
+
+  //     const userData = newUser.toObject();
+  //     delete userData.password;
+
+  //     const token = JWT.sign(
+  //       { id: newUser._id, role: newUser.role },
+  //       process.env.JWT_SECRET_KEY || 'secret',
+  //       { expiresIn: '12h' }
+  //     );
+
+  //     res.status(201).json({
+  //       message: "Ro‘yxatdan o‘tish muvaffaqiyatli",
+  //       userId: newUser._id.toString(),
+  //       token,
+  //       user: userData
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({ message: "Serverda xatolik: " + error.message });
+  //   }
+  // }
+
   signup: async (req, res) => {
-    try {
-      const { username, email, password, surname, job, hobby } = req.body;
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: "Barcha qatorlarni to‘ldiring" });
-      }
-
-      // Email yoki username bandligi
-      const [userExists, usernameExists] = await Promise.all([
-        User.findOne({ email }),
-        User.findOne({ username }),
-      ]);
-      if (userExists) return res.status(403).json({ message: "Bu email allaqachon mavjud" });
-      if (usernameExists) return res.status(403).json({ message: "Bu username allaqachon mavjud" });
-
-      // Parol hash
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = new User({
-        username,
-        email,
-        password: hashedPassword,
-        surname,
-        job,
-        hobby
-      });
-      await newUser.save();
-
-      const userData = newUser.toObject();
-      delete userData.password;
-
-      const token = JWT.sign(
-        { id: newUser._id, role: newUser.role },
-        process.env.JWT_SECRET_KEY || 'secret',
-        { expiresIn: '12h' }
-      );
-
-      res.status(201).json({
-        message: "Ro‘yxatdan o‘tish muvaffaqiyatli",
-        userId: newUser._id.toString(),
-        token,
-        user: userData
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Serverda xatolik: " + error.message });
+  try {
+    const { username, email, password, surname, job, hobby } = req.body;
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "Barcha qatorlarni to‘ldiring" });
     }
+
+    const [userExists, usernameExists] = await Promise.all([
+      User.findOne({ email }),
+      User.findOne({ username }),
+    ]);
+    if (userExists) return res.status(403).json({ message: "Bu email allaqachon mavjud" });
+    if (usernameExists) return res.status(403).json({ message: "Bu username allaqachon mavjud" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      surname,
+      job,
+      hobby,
+      role: 'user' // Assign a default role here, e.g., 'user', '100', etc.
+                     // Make sure this matches a valid default role in your system.
+    });
+    await newUser.save();
+
+    const userData = newUser.toObject();
+    delete userData.password;
+
+    const token = JWT.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET_KEY || 'secret',
+      { expiresIn: '12h' }
+    );
+
+    res.status(201).json({
+      message: "Ro‘yxatdan o‘tish muvaffaqiyatli",
+      userId: newUser._id.toString(),
+      token,
+      user: userData
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Serverda xatolik: " + error.message });
   }
+}
 };
 
 module.exports = authCtrl;
